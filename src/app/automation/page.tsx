@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarClock, Play, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  CalendarClock,
+  CheckCircle2,
+  FlaskConical,
+  Play,
+  Plus,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
-import type { ScheduleRunLog, WorkflowSchedule } from "@/lib/types";
+import type { ScheduleRunLog, TestFlowResult, WorkflowSchedule } from "@/lib/types";
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => index);
 
@@ -33,6 +42,9 @@ export default function AutomationPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<TestFlowResult | null>(null);
+  const [testError, setTestError] = useState("");
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -113,6 +125,25 @@ export default function AutomationPage() {
     }
   }
 
+  async function handleTestFlow(scheduleId: string) {
+    setTestingId(scheduleId);
+    setTestResult(null);
+    setTestError("");
+
+    try {
+      const result = await apiFetch<TestFlowResult>(
+        `/api/schedules/${scheduleId}/test-flow`,
+        { method: "POST" }
+      );
+      setTestResult(result);
+      await loadData();
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : "ทดสอบไม่สำเร็จ");
+    } finally {
+      setTestingId(null);
+    }
+  }
+
   async function handleRun(scheduleId: string) {
     setRunningId(scheduleId);
     try {
@@ -151,6 +182,102 @@ export default function AutomationPage() {
           สร้างตาราง
         </button>
       </div>
+
+      {testError && (
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+          {testError}
+        </div>
+      )}
+
+      {testResult && (
+        <div className="card mb-6 border-green-200 bg-green-50/40">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-gray-900">ผลทดสอบ Flow ทั้งหมด</h2>
+            <button
+              type="button"
+              onClick={() => setTestResult(null)}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              ปิด
+            </button>
+          </div>
+
+          <p className="mb-4 text-sm text-green-700">{testResult.message}</p>
+
+          {testResult.prerequisites?.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                ตรวจสอบก่อนรัน
+              </p>
+              <div className="space-y-2">
+                {testResult.prerequisites.map((check) => (
+                  <div
+                    key={check.label}
+                    className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"
+                  >
+                    {check.ok ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 shrink-0 text-yellow-600" />
+                    )}
+                    <span className="font-medium text-gray-800">{check.label}</span>
+                    <span className="text-gray-500">— {check.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {testResult.steps?.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                ขั้นตอนที่ทำแล้ว
+              </p>
+              <div className="space-y-2">
+                {testResult.steps.map((step) => (
+                  <div
+                    key={step.key}
+                    className="rounded-lg bg-white px-3 py-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      {step.status === "success" ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                      ) : step.status === "failed" ? (
+                        <XCircle className="h-4 w-4 shrink-0 text-red-600" />
+                      ) : (
+                        <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300" />
+                      )}
+                      <span className="font-medium text-gray-800">{step.label}</span>
+                    </div>
+                    <p className="mt-1 pl-6 text-xs text-gray-600">{step.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {testResult.video?.videoUrl && (
+            <div className="mb-4 rounded-lg bg-white p-3">
+              <p className="mb-2 text-xs font-semibold text-gray-500">วิดีโอที่สร้าง</p>
+              <a
+                href={testResult.video.videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-green-700 underline"
+              >
+                เปิดดูวิดีโอ
+              </a>
+            </div>
+          )}
+
+          <Link
+            href={`/workflows/${testResult.workflowId}`}
+            className="btn-primary inline-flex text-sm"
+          >
+            ดู Workflow ที่สร้าง
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
@@ -273,9 +400,20 @@ export default function AutomationPage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
+                      onClick={() => handleTestFlow(schedule.id)}
+                      disabled={testingId === schedule.id || runningId === schedule.id}
+                      className="btn-primary border-2 border-green-700 bg-green-700 py-2 text-xs"
+                    >
+                      <FlaskConical className="h-3.5 w-3.5" />
+                      {testingId === schedule.id
+                        ? "กำลังทดสอบ..."
+                        : "ทดสอบ Flow ทั้งหมด"}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleRun(schedule.id)}
-                      disabled={runningId === schedule.id}
-                      className="btn-primary py-2 text-xs"
+                      disabled={runningId === schedule.id || testingId === schedule.id}
+                      className="btn-secondary py-2 text-xs"
                     >
                       <Play className="h-3.5 w-3.5" />
                       {runningId === schedule.id ? "กำลังรัน..." : "รันทันที"}

@@ -117,3 +117,27 @@ export type ScheduleRunLog = {
   completedAt: string | null;
   schedule?: { name: string };
 };
+
+export type WorkflowFlowStep = {
+  key: string;
+  label: string;
+  status: "success" | "failed" | "skipped";
+  message: string;
+};
+
+export type TestFlowResult = {
+  success: boolean;
+  message: string;
+  workflowId: string;
+  isTestRun: boolean;
+  steps: WorkflowFlowStep[];
+  prerequisites: { label: string; ok: boolean; message: string }[];
+  products: { id: string; name: string; price: number; commission: number | null }[];
+  product?: { id: string; name: string; price: number; imageUrl: string | null };
+  video?: {
+    script: string | null;
+    videoUrl: string | null;
+    thumbnailUrl: string | null;
+    status: string;
+  };
+};
