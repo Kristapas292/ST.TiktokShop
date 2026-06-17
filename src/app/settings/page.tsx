@@ -7,9 +7,9 @@ import { apiFetch } from "@/lib/api";
 import type { TenantSettings } from "@/lib/types";
 
 const TEXT_MODELS = [
-  { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (แนะนำ Free tier)" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (ต้องเปิด Billing)" },
+  { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (แนะนำ)" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (quota จำกัด)" },
 ];
 
 const VIDEO_MODELS = [
@@ -130,7 +130,9 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-6">
               {(geminiModel === "gemini-2.0-flash" ||
-                error.toLowerCase().includes("quota")) && (
+                geminiModel.startsWith("gemini-1.5") ||
+                error.toLowerCase().includes("quota") ||
+                error.toLowerCase().includes("not found")) && (
                 <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
                   <Sparkles className="mt-0.5 h-5 w-5 text-red-600" />
                   <div className="text-sm text-red-800">
