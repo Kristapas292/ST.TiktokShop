@@ -9,6 +9,8 @@ import {
   LogOut,
   ShoppingBag,
   Link2,
+  Settings,
+  CalendarClock,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTikTokStatus } from "@/lib/use-tiktok-status";
@@ -18,6 +20,8 @@ const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
   { href: "/products", label: "สินค้า", icon: Package },
   { href: "/workflows", label: "Workflow", icon: Workflow },
+  { href: "/automation", label: "ตั้งเวลาออโต้", icon: CalendarClock },
+  { href: "/settings", label: "ตั้งค่า AI", icon: Settings },
   { href: "/connect-tiktok", label: "เชื่อมต่อ TikTok", icon: Link2 },
 ];
 

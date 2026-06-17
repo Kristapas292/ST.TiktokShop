@@ -83,3 +83,37 @@ export type TikTokStatus = {
   tiktokOpenId: string | null;
   tokenExpiresAt?: string | null;
 };
+
+export type TenantSettings = {
+  geminiApiKeySet: boolean;
+  geminiApiKeyMasked: string | null;
+  geminiModel: string;
+  geminiVideoModel: string;
+  timezone: string;
+};
+
+export type WorkflowSchedule = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  runHours: string;
+  runDays: string;
+  productStrategy: string;
+  maxProductsPerRun: number;
+  videoStyle: string;
+  lastRunAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  logs?: ScheduleRunLog[];
+};
+
+export type ScheduleRunLog = {
+  id: string;
+  scheduleId: string;
+  workflowId: string | null;
+  status: string;
+  message: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  schedule?: { name: string };
+};
