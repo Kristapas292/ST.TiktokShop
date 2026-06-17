@@ -11,6 +11,8 @@ import {
   Link2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useTikTokStatus } from "@/lib/use-tiktok-status";
+import { TikTokProfileCard } from "@/components/TikTokProfileCard";
 
 const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
@@ -22,6 +24,12 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { tenant, user, logout } = useAuth();
+  const { status, disconnecting, disconnect } = useTikTokStatus();
+
+  async function handleTikTokLogout() {
+    if (!confirm("ต้องการออกจาก TikTok (ยกเลิกการเชื่อมต่อ)?")) return;
+    await disconnect();
+  }
 
   return (
     <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-gray-100 bg-white">
@@ -37,7 +45,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -57,6 +65,20 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {status?.isConnected && (
+          <div className="pt-4">
+            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              TikTok Account
+            </p>
+            <TikTokProfileCard
+              status={status}
+              compact
+              disconnecting={disconnecting}
+              onDisconnect={handleTikTokLogout}
+            />
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-gray-100 p-4">

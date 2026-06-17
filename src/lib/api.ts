@@ -19,9 +19,12 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
+
+  if (options.body) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -38,8 +41,11 @@ export async function apiFetch<T>(
   try {
     data = responseText ? JSON.parse(responseText) : {};
   } catch {
+    const preview = responseText.trim().slice(0, 120);
     throw new Error(
-      "เชื่อมต่อ API ไม่ได้ — ตรวจสอบ API_PROXY_TARGET และว่า API บน VPS รันอยู่"
+      preview
+        ? `API ตอบกลับไม่ถูกต้อง: ${preview}`
+        : "เชื่อมต่อ API ไม่ได้ — ตรวจสอบ API_PROXY_TARGET และว่า API บน VPS รันอยู่"
     );
   }
 
