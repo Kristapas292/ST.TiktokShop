@@ -12,15 +12,15 @@ const TEXT_MODELS = [
 ];
 
 const VIDEO_MODELS = [
-  { value: "veo-2.0-generate-001", label: "Veo 2.0 (แนะนำ)" },
-  { value: "veo-3.0-generate-preview", label: "Veo 3.0 Preview" },
+  { value: "veo-3.0-generate-preview", label: "Veo 3.0 Preview (แนะนำ)" },
+  { value: "veo-2.0-generate-001", label: "Veo 2.0" },
 ];
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<TenantSettings | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [geminiModel, setGeminiModel] = useState("gemini-2.0-flash-lite");
-  const [geminiVideoModel, setGeminiVideoModel] = useState("veo-2.0-generate-001");
+  const [geminiVideoModel, setGeminiVideoModel] = useState("veo-3.0-generate-preview");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -36,7 +36,11 @@ export default function SettingsPage() {
         ? "gemini-2.0-flash-lite"
         : data.geminiModel
     );
-    setGeminiVideoModel(data.geminiVideoModel);
+    setGeminiVideoModel(
+      data.geminiVideoModel === "veo-2.0-generate-001"
+        ? "veo-3.0-generate-preview"
+        : data.geminiVideoModel
+    );
   }
 
   useEffect(() => {
@@ -135,25 +139,37 @@ export default function SettingsPage() {
             <div className="space-y-6">
               {(geminiModel === "gemini-2.0-flash" ||
                 geminiModel.startsWith("gemini-1.5") ||
+                geminiVideoModel === "veo-2.0-generate-001" ||
                 error.toLowerCase().includes("quota") ||
-                error.toLowerCase().includes("not found")) && (
+                error.toLowerCase().includes("not found") ||
+                error.toLowerCase().includes("veo")) && (
                 <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
                   <Sparkles className="mt-0.5 h-5 w-5 text-red-600" />
                   <div className="text-sm text-red-800">
-                    <p className="font-medium">
-                      Quota หมดสำหรับ {geminiModel}
-                    </p>
+                    <p className="font-medium">โมเดล AI ที่เลือกอาจใช้ไม่ได้</p>
                     <p className="mt-1 text-red-700">
-                      เลือก <strong>Flash Lite</strong> แล้วกด{" "}
-                      <strong>บันทึกการตั้งค่า</strong> ก่อนกดทดสอบ
+                      แนะนำ <strong>Flash Lite</strong> สำหรับสคริปต์ และ{" "}
+                      <strong>Veo 3.0 Preview</strong> สำหรับวิดีโอ แล้วกด{" "}
+                      <strong>บันทึกการตั้งค่า</strong>
                     </p>
-                    <button
-                      type="button"
-                      className="btn-primary mt-3 py-2 text-xs"
-                      onClick={() => setGeminiModel("gemini-2.0-flash-lite")}
-                    >
-                      เปลี่ยนเป็น Flash Lite
-                    </button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn-primary py-2 text-xs"
+                        onClick={() => setGeminiModel("gemini-2.0-flash-lite")}
+                      >
+                        เปลี่ยนเป็น Flash Lite
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary py-2 text-xs"
+                        onClick={() =>
+                          setGeminiVideoModel("veo-3.0-generate-preview")
+                        }
+                      >
+                        เปลี่ยนเป็น Veo 3.0
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
