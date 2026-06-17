@@ -9,8 +9,7 @@ import type { TenantSettings } from "@/lib/types";
 const TEXT_MODELS = [
   { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (แนะนำ Free tier)" },
   { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (ต้องเปิด Billing)" },
 ];
 
 const VIDEO_MODELS = [
@@ -78,17 +77,21 @@ export default function SettingsPage() {
     setMessage("");
 
     try {
-      const result = await apiFetch<{ success: boolean; reply: string }>(
-        "/api/settings/test-gemini",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            geminiApiKey: geminiApiKey.trim() || undefined,
-            geminiModel,
-          }),
-        }
-      );
-      setMessage(`ทดสอบ Gemini สำเร็จ: ${result.reply}`);
+      const result = await apiFetch<{
+        success: boolean;
+        reply: string;
+        modelUsed?: string;
+      }>("/api/settings/test-gemini", {
+        method: "POST",
+        body: JSON.stringify({
+          geminiApiKey: geminiApiKey.trim() || undefined,
+          geminiModel,
+        }),
+      });
+      const modelNote = result.modelUsed
+        ? ` (ใช้โมเดล: ${result.modelUsed})`
+        : "";
+      setMessage(`ทดสอบ Gemini สำเร็จ: ${result.reply}${modelNote}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "ทดสอบไม่สำเร็จ");
     } finally {
@@ -126,6 +129,29 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              {(geminiModel === "gemini-2.0-flash" ||
+                error.toLowerCase().includes("quota")) && (
+                <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
+                  <Sparkles className="mt-0.5 h-5 w-5 text-red-600" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium">
+                      Quota หมดสำหรับ {geminiModel}
+                    </p>
+                    <p className="mt-1 text-red-700">
+                      เลือก <strong>Flash Lite</strong> แล้วกด{" "}
+                      <strong>บันทึกการตั้งค่า</strong> ก่อนกดทดสอบ
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-primary mt-3 py-2 text-xs"
+                      onClick={() => setGeminiModel("gemini-2.0-flash-lite")}
+                    >
+                      เปลี่ยนเป็น Flash Lite
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start gap-3 rounded-xl bg-yellow-50 p-4">
                 <Sparkles className="mt-0.5 h-5 w-5 text-yellow-600" />
                 <div className="text-sm text-yellow-800">
