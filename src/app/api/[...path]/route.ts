@@ -36,7 +36,18 @@ async function proxyRequest(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const response = await fetch(targetUrl, init);
+    const response = await fetch(targetUrl, {
+      ...init,
+      redirect: "manual",
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (location) {
+        return NextResponse.redirect(location, response.status);
+      }
+    }
+
     const responseText = await response.text();
 
     return new NextResponse(responseText, {
