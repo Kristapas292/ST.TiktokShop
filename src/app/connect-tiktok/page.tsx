@@ -40,6 +40,10 @@ function formatTikTokCallbackError(rawError: string) {
     return "TikTok API ตอบกลับผิดรูปแบบ — ลองเชื่อมต่อใหม่ หรือตรวจสอบ Client Key/Secret และ Sandbox target user";
   }
 
+  if (lowerError.includes("unsupported path") || lowerError.includes("janus")) {
+    return "ดึงโปรไฟล์ TikTok ไม่สำเร็จ — กำลังแก้ API บน Server ให้ใช้ GET /v2/user/info/ แล้วลองเชื่อมต่อใหม่";
+  }
+
   return rawError;
 }
 
