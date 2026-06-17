@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CheckCircle2,
   FlaskConical,
+  Loader2,
   Play,
   Plus,
   Trash2,
@@ -13,7 +14,13 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
-import type { ScheduleRunLog, TestFlowResult, WorkflowSchedule } from "@/lib/types";
+import type {
+  FlowProgressStep,
+  RunProgress,
+  ScheduleRunLog,
+  TestFlowStartResult,
+  WorkflowSchedule,
+} from "@/lib/types";
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => index);
 
@@ -35,6 +42,142 @@ function parseHours(value: string) {
   }
 }
 
+function StepIcon({ status }: { status: FlowProgressStep["status"] }) {
+  if (status === "running") {
+    return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-green-600" />;
+  }
+  if (status === "success") {
+    return <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />;
+  }
+  if (status === "failed") {
+    return <XCircle className="h-4 w-4 shrink-0 text-red-600" />;
+  }
+  if (status === "skipped") {
+    return <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300" />;
+  }
+  return <span className="h-4 w-4 shrink-0 rounded-full border-2 border-gray-200" />;
+}
+
+function FlowProgressPanel({
+  progress,
+  title,
+  onClose,
+}: {
+  progress: RunProgress;
+  title: string;
+  onClose: () => void;
+}) {
+  const isRunning = progress.status === "running";
+  const isFailed = progress.status === "failed";
+  const result = progress.result;
+
+  return (
+    <div
+      className={`card mb-6 ${
+        isFailed
+          ? "border-red-200 bg-red-50/40"
+          : isRunning
+            ? "border-green-200 bg-green-50/20"
+            : "border-green-200 bg-green-50/40"
+      }`}
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {isRunning && (
+            <Loader2 className="h-5 w-5 animate-spin text-green-600" />
+          )}
+          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-xs text-gray-500 hover:text-gray-700"
+        >
+          ปิด
+        </button>
+      </div>
+
+      {isRunning && (
+        <p className="mb-4 text-sm text-green-700">
+          กำลังดำเนินการ... อัปเดตสถานะอัตโนมัติ
+        </p>
+      )}
+
+      {isFailed && progress.error && (
+        <p className="mb-4 text-sm text-red-600">{progress.error}</p>
+      )}
+
+      {result?.message && progress.status === "success" && (
+        <p className="mb-4 text-sm text-green-700">{result.message}</p>
+      )}
+
+      <div className="mb-4">
+        <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+          {isRunning ? "ขั้นตอนปัจจุบัน" : "ขั้นตอนที่ทำแล้ว"}
+        </p>
+        <div className="space-y-2">
+          {progress.steps.map((step) => (
+            <div
+              key={step.key}
+              className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+                step.status === "running"
+                  ? "bg-green-100 ring-1 ring-green-300"
+                  : "bg-white"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <StepIcon status={step.status} />
+                <span className="font-medium text-gray-800">{step.label}</span>
+                {step.status === "running" && (
+                  <span className="text-xs text-green-600">กำลังทำ...</span>
+                )}
+              </div>
+              <p className="mt-1 pl-6 text-xs text-gray-600">{step.message}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {result?.video?.videoUrl && (
+        <div className="mb-4 rounded-lg bg-white p-3">
+          <p className="mb-2 text-xs font-semibold text-gray-500">วิดีโอที่สร้าง</p>
+          <a
+            href={result.video.videoUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-green-700 underline"
+          >
+            เปิดดูวิดีโอ
+          </a>
+        </div>
+      )}
+
+      {result?.post?.postUrl && (
+        <div className="mb-4 rounded-lg bg-white p-3">
+          <p className="mb-2 text-xs font-semibold text-gray-500">โพสต์ TikTok</p>
+          <a
+            href={result.post.postUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-green-700 underline"
+          >
+            เปิดดูโพสต์
+          </a>
+        </div>
+      )}
+
+      {result?.workflowId && progress.status === "success" && (
+        <Link
+          href={`/workflows/${result.workflowId}`}
+          className="btn-primary inline-flex text-sm"
+        >
+          ดู Workflow ที่สร้าง
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export default function AutomationPage() {
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [logs, setLogs] = useState<ScheduleRunLog[]>([]);
@@ -43,7 +186,8 @@ export default function AutomationPage() {
   const [saving, setSaving] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<TestFlowResult | null>(null);
+  const [activeProgress, setActiveProgress] = useState<RunProgress | null>(null);
+  const [progressTitle, setProgressTitle] = useState("");
   const [testError, setTestError] = useState("");
   const [error, setError] = useState("");
 
@@ -71,6 +215,27 @@ export default function AutomationPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "โหลดไม่สำเร็จ"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!activeProgress || activeProgress.status !== "running") return;
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const data = await apiFetch<{ progress: RunProgress }>(
+          `/api/run-progress/${activeProgress.runId}`
+        );
+        setActiveProgress(data.progress);
+
+        if (data.progress.status !== "running") {
+          await loadData();
+        }
+      } catch (err) {
+        setTestError(err instanceof Error ? err.message : "ดึงสถานะไม่สำเร็จ");
+      }
+    }, 1500);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeProgress?.runId, activeProgress?.status]);
 
   function toggleHour(hour: number) {
     setForm((prev) => ({
@@ -125,36 +290,105 @@ export default function AutomationPage() {
     }
   }
 
-  async function handleTestFlow(scheduleId: string) {
-    setTestingId(scheduleId);
-    setTestResult(null);
+  async function startFlowRun(
+    scheduleId: string,
+    endpoint: "test-flow" | "run",
+    title: string
+  ) {
+    const isTest = endpoint === "test-flow";
+
+    if (isTest) {
+      setTestingId(scheduleId);
+    } else {
+      setRunningId(scheduleId);
+    }
+
+    setActiveProgress(null);
     setTestError("");
+    setProgressTitle(title);
 
     try {
-      const result = await apiFetch<TestFlowResult>(
-        `/api/schedules/${scheduleId}/test-flow`,
+      const startResult = await apiFetch<TestFlowStartResult>(
+        `/api/schedules/${scheduleId}/${endpoint}`,
         { method: "POST" }
       );
-      setTestResult(result);
-      await loadData();
+
+      const initialProgress: RunProgress = {
+        runId: startResult.runId,
+        tenantId: "",
+        scheduleId,
+        isTestRun: startResult.isTestRun,
+        status: "running",
+        currentStepKey: "check",
+        steps: [
+          {
+            key: "check",
+            label: "ตรวจสอบระบบ",
+            status: "success",
+            message: startResult.prerequisites
+              .map((item) => `${item.label}: ${item.message}`)
+              .join(" | "),
+          },
+          {
+            key: "select_product",
+            label: "เลือกสินค้าจากตะกร้า",
+            status: "pending",
+            message: "รอดำเนินการ",
+          },
+          {
+            key: "generate_script",
+            label: "Gemini เขียนสคริปต์รีวิว",
+            status: "pending",
+            message: "รอดำเนินการ",
+          },
+          {
+            key: "generate_video",
+            label: "Gemini เจนวิดีโอ",
+            status: "pending",
+            message: "รอดำเนินการ",
+          },
+          {
+            key: "pin_cart",
+            label: "ปักตะกร้าสินค้า",
+            status: "pending",
+            message: "รอดำเนินการ",
+          },
+          {
+            key: "post_video",
+            label: "โพสต์วิดีโอลง TikTok",
+            status: "pending",
+            message: "รอดำเนินการ",
+          },
+        ],
+        result: null,
+        error: null,
+        startedAt: new Date().toISOString(),
+        completedAt: null,
+      };
+
+      setActiveProgress(initialProgress);
+
+      const pollData = await apiFetch<{ progress: RunProgress }>(
+        `/api/run-progress/${startResult.runId}`
+      );
+      setActiveProgress(pollData.progress);
     } catch (err) {
-      setTestError(err instanceof Error ? err.message : "ทดสอบไม่สำเร็จ");
+      setTestError(err instanceof Error ? err.message : "เริ่มรันไม่สำเร็จ");
     } finally {
-      setTestingId(null);
+      if (isTest) {
+        setTestingId(null);
+      } else {
+        setRunningId(null);
+      }
     }
   }
 
+  async function handleTestFlow(scheduleId: string) {
+    await startFlowRun(scheduleId, "test-flow", "ทดสอบ Flow ทั้งหมด");
+  }
+
   async function handleRun(scheduleId: string) {
-    setRunningId(scheduleId);
-    try {
-      await apiFetch(`/api/schedules/${scheduleId}/run`, { method: "POST" });
-      await loadData();
-      alert("รัน workflow ออโต้สำเร็จ");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "รันไม่สำเร็จ");
-    } finally {
-      setRunningId(null);
-    }
+    await startFlowRun(scheduleId, "run", "รัน Workflow ออโต้");
   }
 
   async function handleDelete(scheduleId: string) {
@@ -174,7 +408,7 @@ export default function AutomationPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">ตั้งเวลาออโต้</h1>
           <p className="text-sm text-gray-500">
-            เลือกสินค้า → Gemini เขียนสคริปต์ → เจนวิดีโอ → ปักตะกร้า ตามเวลาที่กำหนด
+            เลือกสินค้า → Gemini เขียนสคริปต์ → เจนวิดีโอ → ปักตะกร้า → โพสต์ TikTok ตามเวลาที่กำหนด
           </p>
         </div>
         <button type="button" onClick={() => setShowForm(true)} className="btn-primary">
@@ -189,94 +423,12 @@ export default function AutomationPage() {
         </div>
       )}
 
-      {testResult && (
-        <div className="card mb-6 border-green-200 bg-green-50/40">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-gray-900">ผลทดสอบ Flow ทั้งหมด</h2>
-            <button
-              type="button"
-              onClick={() => setTestResult(null)}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              ปิด
-            </button>
-          </div>
-
-          <p className="mb-4 text-sm text-green-700">{testResult.message}</p>
-
-          {testResult.prerequisites?.length > 0 && (
-            <div className="mb-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                ตรวจสอบก่อนรัน
-              </p>
-              <div className="space-y-2">
-                {testResult.prerequisites.map((check) => (
-                  <div
-                    key={check.label}
-                    className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"
-                  >
-                    {check.ok ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 shrink-0 text-yellow-600" />
-                    )}
-                    <span className="font-medium text-gray-800">{check.label}</span>
-                    <span className="text-gray-500">— {check.message}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {testResult.steps?.length > 0 && (
-            <div className="mb-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                ขั้นตอนที่ทำแล้ว
-              </p>
-              <div className="space-y-2">
-                {testResult.steps.map((step) => (
-                  <div
-                    key={step.key}
-                    className="rounded-lg bg-white px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      {step.status === "success" ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                      ) : step.status === "failed" ? (
-                        <XCircle className="h-4 w-4 shrink-0 text-red-600" />
-                      ) : (
-                        <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300" />
-                      )}
-                      <span className="font-medium text-gray-800">{step.label}</span>
-                    </div>
-                    <p className="mt-1 pl-6 text-xs text-gray-600">{step.message}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {testResult.video?.videoUrl && (
-            <div className="mb-4 rounded-lg bg-white p-3">
-              <p className="mb-2 text-xs font-semibold text-gray-500">วิดีโอที่สร้าง</p>
-              <a
-                href={testResult.video.videoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm text-green-700 underline"
-              >
-                เปิดดูวิดีโอ
-              </a>
-            </div>
-          )}
-
-          <Link
-            href={`/workflows/${testResult.workflowId}`}
-            className="btn-primary inline-flex text-sm"
-          >
-            ดู Workflow ที่สร้าง
-          </Link>
-        </div>
+      {activeProgress && (
+        <FlowProgressPanel
+          progress={activeProgress}
+          title={progressTitle}
+          onClose={() => setActiveProgress(null)}
+        />
       )}
 
       {error && (
@@ -401,22 +553,30 @@ export default function AutomationPage() {
                     <button
                       type="button"
                       onClick={() => handleTestFlow(schedule.id)}
-                      disabled={testingId === schedule.id || runningId === schedule.id}
+                      disabled={
+                        testingId === schedule.id ||
+                        runningId === schedule.id ||
+                        activeProgress?.status === "running"
+                      }
                       className="btn-primary border-2 border-green-700 bg-green-700 py-2 text-xs"
                     >
                       <FlaskConical className="h-3.5 w-3.5" />
                       {testingId === schedule.id
-                        ? "กำลังทดสอบ..."
+                        ? "กำลังเริ่มทดสอบ..."
                         : "ทดสอบ Flow ทั้งหมด"}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleRun(schedule.id)}
-                      disabled={runningId === schedule.id || testingId === schedule.id}
+                      disabled={
+                        runningId === schedule.id ||
+                        testingId === schedule.id ||
+                        activeProgress?.status === "running"
+                      }
                       className="btn-secondary py-2 text-xs"
                     >
                       <Play className="h-3.5 w-3.5" />
-                      {runningId === schedule.id ? "กำลังรัน..." : "รันทันที"}
+                      {runningId === schedule.id ? "กำลังเริ่มรัน..." : "รันทันที"}
                     </button>
                     <button
                       type="button"

@@ -170,6 +170,23 @@ export default function WorkflowDetailPage() {
                   วิดีโอพร้อมใช้งาน: {latestVideo.videoUrl}
                 </p>
               )}
+
+              {latestVideo.tiktokPostUrl && (
+                <a
+                  href={latestVideo.tiktokPostUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-block text-xs text-green-700 underline"
+                >
+                  เปิดโพสต์ TikTok
+                </a>
+              )}
+
+              {latestVideo.postStatus === "skipped" && (
+                <p className="mt-3 text-xs text-yellow-700">
+                  ยังไม่ได้โพสต์อัตโนมัติ — ต้องเชื่อมต่อ TikTok และขอ scope video.publish
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -178,7 +195,7 @@ export default function WorkflowDetailPage() {
       {workflow.status !== "completed" && (
         <button onClick={handleRun} className="btn-primary" disabled={running}>
           <Play className="h-4 w-4" />
-          {running ? "Bot กำลังทำงาน..." : "รัน Bot อัตโนมัติ (เจนวิดีโอ + ปักตะกร้า)"}
+          {running ? "Bot กำลังทำงาน..." : "รัน Bot อัตโนมัติ (เจนวิดีโอ + ปักตะกร้า + โพสต์)"}
         </button>
       )}
     </DashboardLayout>

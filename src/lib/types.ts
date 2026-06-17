@@ -53,6 +53,10 @@ export type VideoJob = {
   videoUrl: string | null;
   thumbnailUrl: string | null;
   error: string | null;
+  tiktokPostId?: string | null;
+  tiktokPostUrl?: string | null;
+  postStatus?: string | null;
+  postedAt?: string | null;
   createdAt: string;
 };
 
@@ -125,6 +129,41 @@ export type WorkflowFlowStep = {
   message: string;
 };
 
+export type FlowStepStatus =
+  | "pending"
+  | "running"
+  | "success"
+  | "failed"
+  | "skipped";
+
+export type FlowProgressStep = {
+  key: string;
+  label: string;
+  status: FlowStepStatus;
+  message: string;
+};
+
+export type RunProgress = {
+  runId: string;
+  tenantId: string;
+  scheduleId: string;
+  isTestRun: boolean;
+  status: "running" | "success" | "failed";
+  currentStepKey: string;
+  steps: FlowProgressStep[];
+  result: TestFlowResult | null;
+  error: string | null;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export type TestFlowStartResult = {
+  runId: string;
+  status: "running";
+  isTestRun: boolean;
+  prerequisites: { label: string; ok: boolean; message: string }[];
+};
+
 export type TestFlowResult = {
   success: boolean;
   message: string;
@@ -139,5 +178,13 @@ export type TestFlowResult = {
     videoUrl: string | null;
     thumbnailUrl: string | null;
     status: string;
+    tiktokPostUrl?: string | null;
+    postedAt?: string | null;
+  };
+  post?: {
+    posted: boolean;
+    postUrl: string | null;
+    postId: string | null;
+    message: string;
   };
 };

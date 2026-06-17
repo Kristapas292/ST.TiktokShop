@@ -2,6 +2,7 @@ const STEP_LABELS: Record<string, string> = {
   select_product: "เลือกสินค้า",
   generate_video: "เจนวิดีโอ",
   pin_cart: "ปักตะกร้า",
+  post_video: "โพสต์ TikTok",
   completed: "เสร็จสิ้น",
 };
 
@@ -26,7 +27,7 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function StepProgress({ currentStep }: { currentStep: string }) {
-  const steps = ["select_product", "generate_video", "pin_cart", "completed"];
+  const steps = ["select_product", "generate_video", "pin_cart", "post_video", "completed"];
   const currentIndex = steps.indexOf(currentStep);
 
   return (

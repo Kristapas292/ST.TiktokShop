@@ -9,11 +9,10 @@ import type { TenantSettings } from "@/lib/types";
 const TEXT_MODELS = [
   { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (แนะนำ)" },
   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (quota จำกัด)" },
 ];
 
 const VIDEO_MODELS = [
-  { value: "veo-2.0-generate-001", label: "Veo 2.0" },
+  { value: "veo-2.0-generate-001", label: "Veo 2.0 (แนะนำ)" },
   { value: "veo-3.0-generate-preview", label: "Veo 3.0 Preview" },
 ];
 
@@ -31,7 +30,12 @@ export default function SettingsPage() {
   async function loadSettings() {
     const data = await apiFetch<TenantSettings>("/api/settings");
     setSettings(data);
-    setGeminiModel(data.geminiModel);
+    setGeminiModel(
+      data.geminiModel === "gemini-2.0-flash" ||
+        data.geminiModel.startsWith("gemini-1.5")
+        ? "gemini-2.0-flash-lite"
+        : data.geminiModel
+    );
     setGeminiVideoModel(data.geminiVideoModel);
   }
 
