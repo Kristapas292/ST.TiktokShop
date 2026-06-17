@@ -7,9 +7,10 @@ import { apiFetch } from "@/lib/api";
 import type { TenantSettings } from "@/lib/types";
 
 const TEXT_MODELS = [
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (เร็ว)" },
+  { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (แนะนำ Free tier)" },
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
   { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-  { value: "gemini-2.5-pro-preview-03-25", label: "Gemini 2.5 Pro Preview" },
 ];
 
 const VIDEO_MODELS = [
@@ -20,7 +21,7 @@ const VIDEO_MODELS = [
 export default function SettingsPage() {
   const [settings, setSettings] = useState<TenantSettings | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-2.0-flash");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.0-flash-lite");
   const [geminiVideoModel, setGeminiVideoModel] = useState("veo-2.0-generate-001");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -125,6 +126,25 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              <div className="flex items-start gap-3 rounded-xl bg-yellow-50 p-4">
+                <Sparkles className="mt-0.5 h-5 w-5 text-yellow-600" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium">ถ้าเจอ error Quota exceeded</p>
+                  <p className="mt-1 text-yellow-700">
+                    Free tier มี limit ต่อวัน — เปลี่ยนเป็น{" "}
+                    <strong>gemini-2.0-flash-lite</strong> หรือเปิด Billing ที่{" "}
+                    <a
+                      href="https://aistudio.google.com/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                    >
+                      Google AI Studio
+                    </a>
+                  </p>
+                </div>
+              </div>
+
               <div className="flex items-start gap-3 rounded-xl bg-green-50 p-4">
                 <Sparkles className="mt-0.5 h-5 w-5 text-green-600" />
                 <div className="text-sm text-green-800">
